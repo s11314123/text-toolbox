@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style><title>文字百寶箱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: stats strip on top, tool groups, then input → output panels stacked on phones, side by side on wide screens */
+:root {
+  --bg: #f4f4f1;
+  --surface: #ffffff;
+  --fg: #1d1f24;
+  --muted: #62666f;
+  --line: #dcdcd5;
+  --accent: #2c4fa3;
+  --accent-soft: #e5ebf8;
+  --accent-fg: #ffffff;
+  --ok: #1f7a4a;
+  --font-body: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121418; --surface: #1b1e24; --fg: #e8e9ec; --muted: #9a9fab; --line: #2d313a;
+    --accent: #8aa8f0; --accent-soft: #232c40; --accent-fg: #0e1526; --ok: #6fd19c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121418; --surface: #1b1e24; --fg: #e8e9ec; --muted: #9a9fab; --line: #2d313a;
+  --accent: #8aa8f0; --accent-soft: #232c40; --accent-fg: #0e1526; --ok: #6fd19c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 48px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+header h1 { font-size: 1.75rem; font-weight: 900; margin: 0; letter-spacing: .02em; }
+header p { margin: 2px 0 0; color: var(--muted); }
+.label { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.stat { background: var(--surface); padding: 10px 14px; }
+.stat b { display: block; font-family: var(--font-mono); font-size: 1.35rem; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.3; }
+.stat span { font-size: .8rem; color: var(--muted); }
+.tools { display: flex; flex-direction: column; gap: 12px; }
+.group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.group .gname { width: 5.5em; flex-shrink: 0; font-size: .85rem; color: var(--muted); font-weight: 700; }
+.tool {
+  font: inherit; font-size: .9rem; border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+  padding: 5px 13px; border-radius: 7px; cursor: pointer;
+}
+.tool:hover { border-color: var(--accent); color: var(--accent); }
+.tool.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.tool:focus-visible, .btn:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.panes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 760px) { .panes { grid-template-columns: 1fr; } .group .gname { width: 100%; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+textarea {
+  width: 100%; min-height: 280px; resize: vertical; border: 0; background: transparent; color: var(--fg);
+  font: inherit; line-height: 1.7; padding: 0;
+}
+textarea:focus { outline: none; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { font: inherit; font-size: .85rem; border-radius: 7px; padding: 4px 12px; cursor: pointer; border: 1px solid var(--line); background: transparent; color: var(--fg); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.status { font-size: .85rem; color: var(--muted); min-height: 1.4em; }
+.status.ok { color: var(--ok); }
+footer { color: var(--muted); font-size: .8rem; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>文字百寶箱</h1>
+    <p>簡繁轉換、整理格式、擷取資料、統計字數。全部在你的瀏覽器裡完成，免費、不需登入。</p>
+  </header>
+
+  <div class="stats" aria-label="原文統計">
+    <div class="stat"><b id="sChars">0</b><span>字元（不含空白）</span></div>
+    <div class="stat"><b id="sCjk">0</b><span>中文字</span></div>
+    <div class="stat"><b id="sWords">0</b><span>英文單字</span></div>
+    <div class="stat"><b id="sLines">0</b><span>行數</span></div>
+    <div class="stat"><b id="sPunc">0</b><span>標點符號</span></div>
+    <div class="stat"><b id="sRead">0 秒</b><span>預估閱讀時間</span></div>
+  </div>
+
+  <section class="tools" id="tools" aria-label="工具"></section>
+
+  <div class="panes">
+    <section class="panel">
+      <div class="panel-head">
+        <span class="label">原文</span>
+        <div class="row">
+          <button class="btn" id="clear">清空</button>
+        </div>
+      </div>
+      <textarea id="input" aria-label="原文"></textarea>
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <span class="label" id="outLabel">結果</span>
+        <div class="row">
+          <button class="btn" id="back">放回原文</button>
+          <button class="btn primary" id="copy">複製</button>
+        </div>
+      </div>
+      <textarea id="output" aria-label="結果" readonly></textarea>
+    </section>
+  </div>
+  <div class="status" id="status" role="status"></div>
+
+  <footer>文字不會上傳到任何地方。簡繁轉換使用開源的 OpenCC 詞庫（含台灣常用詞，如「软件 → 軟體」）。</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const input = $("input"), output = $("output"), status = $("status");
+
+let s2t = null, t2s = null;
+try {
+  if (window.OpenCC) {
+    s2t = OpenCC.Converter({ from: "cn", to: "twp" });
+    t2s = OpenCC.Converter({ from: "twp", to: "cn" });
+  }
+} catch (e) { s2t = t2s = null; }
+
+const lines = (t) => t.split(/\r?\n/);
+const uniq = (arr) => [...new Set(arr)];
+const extract = (t, re) => uniq(t.match(re) || []).join("\n");
+
+const TOOLS = [
+  { group: "簡繁轉換", items: [
+    { name: "簡 → 繁（台灣）", fn: (t) => s2t ? s2t(t) : null },
+    { name: "繁 → 簡", fn: (t) => t2s ? t2s(t) : null },
+  ]},
+  { group: "整理格式", items: [
+    { name: "清掉多餘空白", fn: (t) => lines(t).map(l => l.replace(/[ \t　]+/g, " ").trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim() },
+    { name: "刪除所有空行", fn: (t) => lines(t).filter(l => l.trim()).join("\n") },
+    { name: "合併成一段", fn: (t) => lines(t).map(l => l.trim()).filter(Boolean).reduce((acc, l) => !acc ? l : (/[A-Za-z0-9,.;:!?]$/.test(acc) && /^[A-Za-z0-9]/.test(l) ? acc + " " + l : acc + l), "") },
+    { name: "中英之間加空格", fn: (t) => t.replace(/([一-鿿])([A-Za-z0-9])/g, "$1 $2").replace(/([A-Za-z0-9])([一-鿿])/g, "$1 $2") },
+    { name: "全形英數 → 半形", fn: (t) => t.replace(/[！-～]/g, c => { const ch = String.fromCharCode(c.charCodeAt(0) - 0xFEE0); return /[A-Za-z0-9]/.test(ch) ? ch : c; }).replace(/　/g, " ") },
+    { name: "半形標點 → 全形", fn: (t) => t.replace(/,(?!\d)/g, "，").replace(/;/g, "；").replace(/:(?!\/\/|\d)/g, "：").replace(/\?/g, "？").replace(/!/g, "！").replace(/\(([^)]*)\)/g, "（$1）") },
+  ]},
+  { group: "清單處理", items: [
+    { name: "排序", fn: (t) => lines(t).filter(l => l.trim()).sort((a, b) => a.localeCompare(b, "zh-Hant")).join("\n") },
+    { name: "去除重複行", fn: (t) => uniq(lines(t).map(l => l.trim()).filter(Boolean)).join("\n") },
+    { name: "反轉順序", fn: (t) => lines(t).reverse().join("\n") },
+    { name: "加上編號", fn: (t) => lines(t).filter(l => l.trim()).map((l, i) => `${i + 1}. ${l.trim()}`).join("\n") },
+    { name: "變成待辦清單", fn: (t) => lines(t).filter(l => l.trim()).map(l => "☐ " + l.trim().replace(/^([-*•☐]|\d+[.、)])\s*/, "")).join("\n") },
+    { name: "隨機打亂", fn: (t) => { const a = lines(t).filter(l => l.trim()); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a.join("\n"); } },
+  ]},
+  { group: "擷取資料", items: [
+    { name: "Email", fn: (t) => extract(t, /[\w.+-]+@[\w-]+(\.[\w-]+)+/g) },
+    { name: "網址", fn: (t) => extract(t, /https?:\/\/[^\s<>"'，。、）)]+/g) },
+    { name: "電話", fn: (t) => extract(t, /(\+886[-\s]?|0)(9\d{2}[-\s]?\d{3}[-\s]?\d{3}|\d{1,2}[-\s]?\d{3,4}[-\s]?\d{4})/g) },
+    { name: "數字", fn: (t) => (t.match(/-?\d+(,\d{3})*(\.\d+)?/g) || []).join("\n") },
+    { name: "#標籤", fn: (t) => extract(t, /#[\p{L}\p{N}_]+/gu) },
+  ]},
+  { group: "英文", items: [
+    { name: "全部大寫", fn: (t) => t.toUpperCase() },
+    { name: "全部小寫", fn: (t) => t.toLowerCase() },
+    { name: "單字首字大寫", fn: (t) => t.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase()) },
+    { name: "句首大寫", fn: (t) => t.toLowerCase().replace(/(^\s*|[.!?]\s+)([a-z])/g, (m, a, b) => a + b.toUpperCase()) },
+  ]},
+];
+
+const SAMPLE = `期末专题分工（周三会议记录）
+小明：整理资料   ，下周五前交
+阿华：制作 PPT，控制在15页以内
+我：写结论跟参考文献
+老师Email：prof.lin@example.edu.tw
+联络电话：0912-345-678
+参考网站：https://www.example.com/report
+小明：整理资料   ，下周五前交`;
+
+let current = null;
+
+function renderTools() {
+  const box = $("tools");
+  TOOLS.forEach(g => {
+    const row = document.createElement("div"); row.className = "group";
+    const n = document.createElement("span"); n.className = "gname"; n.textContent = g.group;
+    row.appendChild(n);
+    g.items.forEach((t, i) => {
+      const b = document.createElement("button");
+      b.className = "tool"; b.textContent = t.name; b.id = "tool-" + g.group + "-" + i;
+      b.onclick = () => apply(t, b);
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+  });
+}
+
+function apply(tool, btn) {
+  const res = tool.fn(input.value);
+  if (res === null) { setStatus("簡繁轉換的詞庫沒有載入成功，請檢查網路後重新整理頁面。"); return; }
+  output.value = res;
+  document.querySelectorAll(".tool.active").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+  current = tool;
+  $("outLabel").textContent = "結果：" + tool.name;
+  const n = res ? lines(res).filter(l => l.trim()).length : 0;
+  setStatus(res ? `完成，共 ${n} 行。` : "沒有找到符合的內容。", !!res);
+}
+
+function setStatus(msg, ok) { status.textContent = msg; status.className = "status" + (ok ? " ok" : ""); }
+
+function stats() {
+  const t = input.value;
+  const cjk = (t.match(/[一-鿿㐀-䶿]/g) || []).length;
+  const words = (t.match(/[A-Za-z]+(['’-][A-Za-z]+)*/g) || []).length;
+  const chars = t.replace(/\s/g, "").length;
+  const punc = (t.match(/[\p{P}]/gu) || []).length;
+  const ln = t.trim() ? lines(t.trim()).length : 0;
+  const secs = Math.round(cjk / 400 * 60 + words / 220 * 60);
+  $("sChars").textContent = chars.toLocaleString();
+  $("sCjk").textContent = cjk.toLocaleString();
+  $("sWords").textContent = words.toLocaleString();
+  $("sLines").textContent = ln.toLocaleString();
+  $("sPunc").textContent = punc.toLocaleString();
+  $("sRead").textContent = secs < 60 ? secs + " 秒" : Math.round(secs / 60) + " 分鐘";
+}
+
+function save() { try { localStorage.setItem("draft", input.value); } catch (e) {} }
+
+input.addEventListener("input", () => {
+  stats(); save();
+  if (current) { const r = current.fn(input.value); if (r !== null) output.value = r; }
+});
+$("clear").onclick = () => { input.value = ""; output.value = ""; stats(); save(); input.focus(); setStatus(""); };
+$("back").onclick = () => { input.value = output.value; stats(); save(); setStatus("結果已放回原文，可以接著用其他工具。", true); };
+$("copy").onclick = async () => {
+  try { await navigator.clipboard.writeText(output.value); setStatus("已複製。", true); }
+  catch (e) { output.focus(); output.select(); setStatus("已選取結果，請按 Ctrl+C 複製。"); }
+};
+
+renderTools();
+let draft = null; try { draft = localStorage.getItem("draft"); } catch (e) {}
+input.value = draft || SAMPLE;
+stats();
+// open in a useful state: show the simplified→traditional demo on the sample
+const first = TOOLS[0].items[0];
+apply(first, $("tool-簡繁轉換-0"));
+if (!draft) setStatus("上面是範例文字。點任何工具試試看，結果會隨原文即時更新。", true);
+</script>
+
+</body>
+</html>
